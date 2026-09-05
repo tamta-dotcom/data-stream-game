@@ -79,7 +79,7 @@ export default function DataStreamGame() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = "#05070a";
+    ctx.fillStyle = "#050505";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const gameOvers = events.filter((e) => e.event_type === "game_over");
@@ -90,12 +90,12 @@ export default function DataStreamGame() {
       if (pt.death_x !== undefined && pt.death_y !== undefined) {
         const x = pt.death_x * scaleX;
         const y = pt.death_y * scaleY;
-        const grad = ctx.createRadialGradient(x, y, 1, x, y, 14);
-        grad.addColorStop(0, "rgba(248, 81, 73, 0.9)");
-        grad.addColorStop(1, "rgba(248, 81, 73, 0)");
+        const grad = ctx.createRadialGradient(x, y, 1, x, y, 16);
+        grad.addColorStop(0, "rgba(255, 0, 60, 0.9)");
+        grad.addColorStop(1, "rgba(255, 0, 60, 0)");
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(x, y, 14, 0, Math.PI * 2);
+        ctx.arc(x, y, 16, 0, Math.PI * 2);
         ctx.fill();
       }
     });
@@ -120,7 +120,7 @@ export default function DataStreamGame() {
   }, []);
 
   const clearData = useCallback(() => {
-    if (confirm("Erase all local telemetry metrics?")) {
+    if (confirm("Execute purge of local telemetry buffer?")) {
       setEvents([]);
       localStorage.removeItem("portfolio_game_telemetry");
     }
@@ -144,7 +144,7 @@ export default function DataStreamGame() {
     else if (edge === 2) x = Math.random() * cw;
     else { x = Math.random() * cw; y = ch; }
 
-    let speed = 1.2 + Math.random() * 1.5;
+    let speed = 1.4 + Math.random() * 1.5;
     
     // A/B Test Mechanic: Cohort B enemies move 30% faster
     if (visitorCohort.current === "B") {
@@ -172,15 +172,15 @@ export default function DataStreamGame() {
       efficiency_pct: efficiency,
     });
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
     ctx.fillRect(0, 0, cw, ch);
-    ctx.fillStyle = "#f85149";
-    ctx.font = "16px monospace";
+    ctx.fillStyle = "#ff003c";
+    ctx.font = "bold 18px monospace";
     ctx.textAlign = "center";
-    ctx.fillText("TERMINATED // DATA STREAM INTERRUPTED", cw / 2, ch / 2 - 10);
-    ctx.fillStyle = "#c9d1d9";
+    ctx.fillText("CRITICAL FAILURE // STREAM SEVERED", cw / 2, ch / 2 - 10);
+    ctx.fillStyle = "#00f0ff";
     ctx.font = "12px monospace";
-    ctx.fillText(`Telemetry logged: ${state.score} pts in ${durationSec}s`, cw / 2, ch / 2 + 15);
+    ctx.fillText(`PACKETS: ${state.score} | UPTIME: ${durationSec}s`, cw / 2, ch / 2 + 15);
   }, [logEvent]);
 
   const gameLoop = useCallback(function loop() {
@@ -192,11 +192,13 @@ export default function DataStreamGame() {
     const ch = canvas.height;
     const p = playerRef.current;
 
-    ctx.fillStyle = "rgba(5, 7, 10, 0.2)";
+    ctx.fillStyle = "rgba(5, 5, 8, 0.3)";
     ctx.fillRect(0, 0, cw, ch);
 
-    // Draw Player
-    ctx.fillStyle = "#58a6ff";
+    // Draw Player (Neon Cyan)
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#00f0ff";
+    ctx.fillStyle = "#00f0ff";
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
@@ -205,10 +207,11 @@ export default function DataStreamGame() {
     if (Math.random() < 0.02) spawnPacket(cw, ch);
     if (Math.random() < 0.03 + runState.current.score * 0.001) spawnEnemy(cw, ch);
 
-    // Update Items
+    // Update Items (Neon Green)
+    ctx.shadowColor = "#39ff14";
+    ctx.fillStyle = "#39ff14";
     for (let i = itemsRef.current.length - 1; i >= 0; i--) {
       const it = itemsRef.current[i];
-      ctx.fillStyle = "#2ea043";
       ctx.fillRect(it.x - it.size / 2, it.y - it.size / 2, it.size * 2, it.size * 2);
 
       const dist = Math.hypot(p.x - it.x, p.y - it.y);
@@ -222,24 +225,27 @@ export default function DataStreamGame() {
       }
     }
 
-    // Update Enemies
+    // Update Enemies (Neon Pink/Red)
+    ctx.shadowColor = "#ff003c";
+    ctx.fillStyle = "#ff003c";
     for (let i = enemiesRef.current.length - 1; i >= 0; i--) {
       const en = enemiesRef.current[i];
       const angle = Math.atan2(p.y - en.y, p.x - en.x);
       en.x += Math.cos(angle) * (en.speed || 1);
       en.y += Math.sin(angle) * (en.speed || 1);
 
-      ctx.fillStyle = "#f85149";
       ctx.beginPath();
       ctx.arc(en.x, en.y, en.size, 0, Math.PI * 2);
       ctx.fill();
 
       if (Math.hypot(p.x - en.x, p.y - en.y) < p.size + en.size) {
+        ctx.shadowBlur = 0;
         gameOver(ctx, cw, ch);
         return;
       }
     }
 
+    ctx.shadowBlur = 0;
     if (isPlayingRef.current) requestRef.current = requestAnimationFrame(loop);
   }, [spawnPacket, spawnEnemy, gameOver, logEvent]);
 
@@ -287,87 +293,119 @@ export default function DataStreamGame() {
   const avgEff = totalRuns ? gameOvers.reduce((acc, e) => acc + (e.efficiency_pct || 0), 0) / totalRuns : 0;
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#c9d1d9] font-sans p-6 flex flex-col items-center gap-6">
-      <header className="text-center max-w-3xl">
-        <h1 className="text-white text-2xl font-bold mb-2">DATA STREAM // Telemetry Pipeline</h1>
-        <p className="text-[#8b949e] text-sm">An interactive arcade mini-game collecting client-side events.</p>
+    <div className="min-h- bg-transparent text-slate-300 font-mono p-6 flex flex-col items-center gap-8 relative overflow-hidden">
+      {/* High-Tech Grid Background */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-30 pointer-events-none" />
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_0%,rgba(0,240,255,0.05),transparent)] pointer-events-none" />
+
+      <header className="text-center max-w-3xl z-10 mt-4 border-b border-cyan-900/50 pb-4">
+        <h1 className="text-cyan-400 text-3xl font-bold tracking-widest uppercase">
+          Sys.Telemetry_Engine
+        </h1>
+        <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">
+          {/*===Client-Side Event Ingestion & Real-Time Analytics===*/} 
+        </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-[500px_420px] gap-6 w-full max-w-5xl">
-        {/* Game Panel */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 flex flex-col gap-3">
-          <div className="flex justify-between items-center font-semibold text-white">
-            <span>Play Session</span>
-            <span className="font-mono text-[#58a6ff]">SCORE: {score}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-[500px_420px] gap-8 w-full max-w-5xl z-10">
+        
+        {/* === LEFT PANEL: GAMEPLAY === */}
+        <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 shadow-[0_0_15px_rgba(0,240,255,0.05)] rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyan-500/50 rounded-tl-xl" />
+          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyan-500/50 rounded-br-xl" />
+
+          <div className="flex justify-between items-end font-semibold">
+            <span className="text-slate-400 text-xs tracking-widest uppercase">Target Vector</span>
+            <span className="text-cyan-400 text-xl tracking-wider">
+              {String(score).padStart(4, '0')}
+            </span>
           </div>
           
-          <canvas
-            ref={canvasRef}
-            width={466}
-            height={380}
-            onMouseMove={handleMouseMove}
-            className="w-full h-[380px] bg-[#05070a] border border-[#30363d] rounded cursor-crosshair block"
-          />
+          <div className="relative p-1 bg-gradient-to-b from-cyan-900/20 to-transparent rounded-lg">
+            <canvas
+              ref={canvasRef}
+              width={466}
+              height={380}
+              onMouseMove={handleMouseMove}
+              className="w-full h-[380px] bg-[#050505] border border-cyan-900/50 rounded cursor-crosshair block shadow-inner"
+            />
+          </div>
           
-          <div className="flex justify-between items-center text-sm font-mono mt-2">
-            <span>Move: Mouse / Touch</span>
+          <div className="flex justify-between items-center text-xs text-slate-500 mt-1">
+            <span className="animate-pulse">[ INPUT: MOUSE_TRACKING ]</span>
             <button
               onClick={startGame}
               disabled={isPlaying}
-              className="bg-[#238636] hover:bg-[#2ea043] text-white px-4 py-2 rounded-md font-semibold transition disabled:opacity-50"
+              className="bg-cyan-950/50 border border-cyan-500/50 hover:bg-cyan-900 hover:text-white text-cyan-400 px-6 py-2 rounded-md font-bold tracking-wider transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(0,240,255,0.1)]"
             >
-              {isPlaying ? "Running..." : "Start Run"}
+              {isPlaying ? "EXECUTING..." : "INITIATE RUN"}
             </button>
           </div>
         </div>
 
-        {/* Dashboard Panel */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 flex flex-col gap-4">
-          <div className="flex justify-between items-center font-semibold text-white">
-            <div className="flex items-center gap-2">
-              <span>Live Telemetry Engine</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-mono ${
-                !isMounted ? "bg-gray-900/50 text-gray-500" :
-                visitorCohort.current === "A" ? "bg-blue-900/50 text-blue-400" : "bg-purple-900/50 text-purple-400"
+        {/* === RIGHT PANEL: DASHBOARD === */}
+        <div className="bg-black/40 backdrop-blur-md border border-slate-800 rounded-xl p-5 flex flex-col gap-5">
+          
+          <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+            <div className="flex items-center gap-3">
+              <span className="text-slate-400 text-xs tracking-widest uppercase">Live Metrics</span>
+              <span className={`text-[9px] px-2 py-0.5 rounded border ${
+                !isMounted ? "bg-gray-900/50 border-gray-700 text-gray-500" :
+                visitorCohort.current === "A" ? "bg-cyan-900/30 border-cyan-700 text-cyan-400" : "bg-fuchsia-900/30 border-fuchsia-700 text-fuchsia-400"
               }`}>
-                TEST_GROUP: {isMounted ? visitorCohort.current : "..."}
+                COHORT: {isMounted ? visitorCohort.current : "..."}
               </span>
             </div>
-            <span className="text-[#8b949e] text-xs">Buffer: {events.length} events</span>
+            <span className="text-emerald-500 text-xs flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              {events.length} LOGS
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          {/* KPI Grid */}
+          <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "Runs Logged", val: totalRuns },
-              { label: "Avg Run Duration", val: `${avgDuration.toFixed(1)}s` },
-              { label: "High Score", val: highScore },
-              { label: "Collection Efficiency", val: `${avgEff.toFixed(1)}%` },
+              { label: "Sessions", val: totalRuns, color: "text-white" },
+              { label: "Avg Uptime", val: `${avgDuration.toFixed(1)}s`, color: "text-emerald-400" },
+              { label: "Peak Score", val: highScore, color: "text-cyan-400" },
+              { label: "Efficiency", val: `${avgEff.toFixed(1)}%`, color: "text-fuchsia-400" },
             ].map((kpi, i) => (
-              <div key={i} className="bg-[#0d1117] border border-[#30363d] rounded p-2">
-                <span className="block text-[10px] text-[#8b949e] uppercase">{kpi.label}</span>
-                <strong className="block text-lg text-[#58a6ff] mt-1">{kpi.val}</strong>
+              <div key={i} className="bg-[#0a0a0f] border-l-2 border-slate-700 hover:border-cyan-500 transition-colors rounded-r p-3">
+                <span className="block text-[9px] text-slate-500 uppercase tracking-wider">{kpi.label}</span>
+                <strong className={`block text-xl font-normal mt-1 ${kpi.color}`}>{kpi.val}</strong>
               </div>
             ))}
           </div>
 
+          {/* Heatmap */}
           <div>
-            <div className="text-xs text-[#8b949e] mb-1">Player Termination Heatmap (X, Y)</div>
-            <canvas ref={heatmapRef} width={386} height={160} className="w-full bg-[#05070a] border border-[#30363d] rounded" />
+            <div className="flex justify-between text-[10px] text-slate-500 uppercase tracking-widest mb-2">
+              <span>Failure Distribution</span>
+              <span>(X, Y) Mapping</span>
+            </div>
+            <canvas 
+              ref={heatmapRef} 
+              width={386} 
+              height={120} 
+              className="w-full h-[120px] bg-[#050505] border border-slate-800 rounded opacity-90" 
+            />
           </div>
 
+          {/* Terminal Log */}
           <div className="flex flex-col flex-grow">
-            <div className="text-xs text-[#8b949e] mb-1">Raw Event Ingestion Log</div>
-            <div className="bg-[#05070a] border border-[#30363d] rounded p-2 h-[120px] overflow-y-auto font-mono text-[10px] text-[#7ee787] flex flex-col gap-1">
-              {events.slice(0, 20).map((e) => (
-                <div key={e.event_id} className={e.event_type === "game_over" ? "text-[#f85149]" : ""}>
-                  [{e.timestamp.split("T")[1].substring(0, 8)}] [{e.event_type}] {JSON.stringify(e)}
+            <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Raw Data Stream</div>
+            <div className="bg-[#030303] border border-slate-800 rounded p-3 h-[130px] overflow-y-auto text-[9px] flex flex-col gap-1 shadow-inner relative">
+              <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-b from-[#030303] to-transparent pointer-events-none" />
+              {events.slice(0, 30).map((e) => (
+                <div key={e.event_id} className={`break-all ${e.event_type === "game_over" ? "text-rose-500" : "text-slate-400"}`}>
+                  <span className="text-slate-600">[{e.timestamp.split("T")[1].substring(0, 8)}]</span> <span className={e.event_type === 'collect_item' ? 'text-emerald-500' : ''}>{e.event_type}</span>: {JSON.stringify(e)}
                 </div>
               ))}
             </div>
           </div>
 
-          <button onClick={clearData} className="w-full bg-transparent border border-[#30363d] hover:bg-[#30363d] text-[#f85149] px-4 py-2 rounded-md font-semibold text-sm transition mt-2">
-            Clear Local Data
+          <button onClick={clearData} className="w-full text-xs tracking-widest uppercase bg-transparent border border-rose-900/50 hover:bg-rose-900/20 text-rose-500 py-2.5 rounded transition-all">
+            Purge Buffer
           </button>
         </div>
       </div>
