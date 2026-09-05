@@ -8,6 +8,7 @@ type TelemetryEvent = {
   event_id: string;
   event_type: "session_start" | "collect_item" | "game_over";
   timestamp: string;
+  cohort: "A" | "B"; // A/B testing cohort
   score?: number;
   duration_sec?: number;
   death_x?: number;
@@ -25,10 +26,16 @@ export default function DataStreamGame() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [score, setScore] = useState(0);
 
+  // Default to "A" for stable server rendering
+  const visitorCohort = useRef<"A" | "B">("A");
+  
+  // Track when the client has safely mounted
+  const [isMounted, setIsMounted] = useState(false);
+
   // Canvas & Mutable Game State
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const heatmapRef = useRef<HTMLCanvasElement>(null);
-const requestRef = useRef<number | null>(null);
+  const requestRef = useRef<number | null>(null);
   const playerRef = useRef<GameObject>({ x: 233, y: 190, size: 8 });
   const itemsRef = useRef<GameObject[]>([]);
   const enemiesRef = useRef<GameObject[]>([]);
@@ -45,10 +52,12 @@ const requestRef = useRef<number | null>(null);
   });
 
   // --- Initialization & LocalStorage ---
- // --- Initialization & LocalStorage ---
   useEffect(() => {
-    // We use a small timeout to make the update asynchronous. 
-    // This satisfies the compiler and prevents a synchronous double-render.
+    // 1. Assign the random cohort ONLY on the client
+    visitorCohort.current = Math.random() < 0.5 ? "A" : "B";
+    setIsMounted(true);
+
+    // 2. Load the local storage data
     const timeoutId = setTimeout(() => {
       try {
         const stored = localStorage.getItem("portfolio_game_telemetry");
@@ -99,6 +108,7 @@ const requestRef = useRef<number | null>(null);
       event_id: "evt-" + Math.random().toString(36).substring(2, 9),
       event_type: type,
       timestamp: new Date().toISOString(),
+      cohort: visitorCohort.current, // Automatically tag all events with the cohort
       ...payload,
     };
 
@@ -134,7 +144,14 @@ const requestRef = useRef<number | null>(null);
     else if (edge === 2) x = Math.random() * cw;
     else { x = Math.random() * cw; y = ch; }
 
-    enemiesRef.current.push({ x, y, size: 6, speed: 1.2 + Math.random() * 1.5 });
+    let speed = 1.2 + Math.random() * 1.5;
+    
+    // A/B Test Mechanic: Cohort B enemies move 30% faster
+    if (visitorCohort.current === "B") {
+      speed = speed * 1.3; 
+    }
+
+    enemiesRef.current.push({ x, y, size: 6, speed });
   }, []);
 
   const gameOver = useCallback((ctx: CanvasRenderingContext2D, cw: number, ch: number) => {
@@ -166,7 +183,7 @@ const requestRef = useRef<number | null>(null);
     ctx.fillText(`Telemetry logged: ${state.score} pts in ${durationSec}s`, cw / 2, ch / 2 + 15);
   }, [logEvent]);
 
- const gameLoop = useCallback(function loop() {
+  const gameLoop = useCallback(function loop() {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx || !runState.current.startTime) return;
@@ -307,7 +324,15 @@ const requestRef = useRef<number | null>(null);
         {/* Dashboard Panel */}
         <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 flex flex-col gap-4">
           <div className="flex justify-between items-center font-semibold text-white">
-            <span>Live Telemetry Engine</span>
+            <div className="flex items-center gap-2">
+              <span>Live Telemetry Engine</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono ${
+                !isMounted ? "bg-gray-900/50 text-gray-500" :
+                visitorCohort.current === "A" ? "bg-blue-900/50 text-blue-400" : "bg-purple-900/50 text-purple-400"
+              }`}>
+                TEST_GROUP: {isMounted ? visitorCohort.current : "..."}
+              </span>
+            </div>
             <span className="text-[#8b949e] text-xs">Buffer: {events.length} events</span>
           </div>
 
