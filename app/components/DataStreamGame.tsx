@@ -293,17 +293,17 @@ export default function DataStreamGame() {
   const avgEff = totalRuns ? gameOvers.reduce((acc, e) => acc + (e.efficiency_pct || 0), 0) / totalRuns : 0;
 
   return (
-    <div className="min-h- bg-transparent text-slate-300 font-mono p-6 flex flex-col items-center gap-8 relative overflow-hidden">
+    <div className="min-h- bg-transparent text-slate-300 font-mono p-2 flex flex-col items-center gap-8 relative overflow-hidden">
       {/* High-Tech Grid Background */}
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-30 pointer-events-none" />
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] background-size:[24px_24px] opacity-30 pointer-events-none" />
       <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_0%,rgba(0,240,255,0.05),transparent)] pointer-events-none" />
 
       <header className="text-center max-w-3xl z-10 mt-4 border-b border-cyan-900/50 pb-4">
-        <h1 className="text-cyan-400 text-3xl font-bold tracking-widest uppercase">
-          Sys.Telemetry_Engine
+        <h1 className="text-cyan-400 text-3xl font-bold tracking-wider uppercase">
+          Sys_Telemetry_Engine
         </h1>
         <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">
-          {/*===Client-Side Event Ingestion & Real-Time Analytics===*/} 
+          ---Client-Side Event Ingestion & Real-Time Analytics---
         </p>
       </header>
 
